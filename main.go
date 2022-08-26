@@ -40,10 +40,21 @@ func (f neuteredReaddirFile) Readdir(count int) ([]os.FileInfo, error) {
 	return nil, nil
 }
 
+func cors(fs http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if conf.Cors != "" {
+			w.Header().Set("Access-Control-Allow-Origin", conf.Cors)
+		}
+
+		fs.ServeHTTP(w, r)
+	}
+}
+
 type Conf struct {
 	Port       int
 	Domain     string
 	StaticPath string
+	Cors       string
 }
 
 var conf Conf
@@ -66,8 +77,10 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/",
-		http.FileServer(
-			justFilesFilesystem{http.Dir(conf.StaticPath)}),
+		cors(
+			http.FileServer(
+				justFilesFilesystem{http.Dir(conf.StaticPath)}),
+		),
 	)
 
 	var httpsSrv *http.Server
